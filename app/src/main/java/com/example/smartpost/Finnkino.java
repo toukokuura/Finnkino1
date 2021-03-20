@@ -2,11 +2,12 @@ package com.example.smartpost;
 
 import org.w3c.dom.Element;
 
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Finnkino {
 
-    private int amount;
     private ArrayList<Teatteri> teatteri_array;
 
     // singleton, eli näitä voi olla vain yksi:
@@ -20,7 +21,6 @@ public class Finnkino {
     private Finnkino() {
         // privaatti rakentaja
 
-        // Taulukon alustus (initializing)
         teatteri_array = new ArrayList<Teatteri>();
 
     }
@@ -66,14 +66,16 @@ public class Finnkino {
 
     //--------------------------------------------------------------------------------
 
-    public void addMovies(Element e, String theaterID, String date) {
+    public ArrayList<String> addMovies(Element e, String theaterID, Date date1, Date date2, ArrayList<String> elokuva_array) throws ParseException {
         //etsi oikea teatteri
         int i = findTeatteriID(theaterID);
 
         if (i>-1) {
             //lisätään elokuvat tiettyyn teatteriin
-            teatteri_array.get(i).addMovies(e);
+            elokuva_array = teatteri_array.get(i).addMovies(e, date1, date2, elokuva_array);
         }
+
+        return elokuva_array;
     }
 
 
@@ -110,32 +112,6 @@ public class Finnkino {
 
         return ("Teatteri: " + teatteri_array.get(i).getNimi()
                 + "\nID: " + teatteri_array.get(i).getID());
-    }
-
-    public ArrayList<String> getMovieInfo(String theaterID) {
-        // return all movies from a specific theater
-
-        int i = findTeatteriID(theaterID);
-
-        // change format to string
-        ArrayList<String> movies = new ArrayList<String>();
-
-        if (i==-1) {
-            return movies;
-        } else {
-            ArrayList<Elokuva> elokuva_array = teatteri_array.get(i).getInfo();
-
-
-
-            for (int j = 0; j < elokuva_array.size(); j++) {
-
-                movies.add(elokuva_array.get(j).getTitle()
-                        + " (" + elokuva_array.get(j).getProductionYear() + ") \nPituus: "
-                        + elokuva_array.get(j).getLengthMin() + "min \nIkäraja: "
-                        + elokuva_array.get(j).getRating());
-            }
-            return movies;
-        }
     }
 
     public ArrayList<String> getNames () {

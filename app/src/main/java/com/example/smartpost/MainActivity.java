@@ -5,6 +5,8 @@ package com.example.smartpost;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.StrictMode;
@@ -13,10 +15,13 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.TimePicker;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -25,8 +30,11 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -36,21 +44,21 @@ import javax.xml.parsers.ParserConfigurationException;
 
 public class MainActivity extends AppCompatActivity {
 
-    TextView info;
     EditText search;
     ListView listView;
     Spinner spinner;
     Context context;
+    Button alku, loppu, pva;
+    TextView alkuText, loppuText, pvaText;
 
-    String name = "";
-    Integer spinnernro;
+    String currentTheater, name = "";
+    int day, month, year, hour, minute;
+    int myDay, myMonth, myYear, myHour1, myMinute1, myHour2, myMinute2;
 
     // Creation of singleton
     Finnkino list = Finnkino.getInstance();
 
-    ArrayList<String> movies = null;
-    ArrayList<String> theaters = new ArrayList<String>();
-    ArrayList<String> filterlist;
+    ArrayList<String> movies = null, theaters = new ArrayList<String>(), filterlist;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,10 +66,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         context = MainActivity.this;
 
-        info = (TextView) findViewById(R.id.info);
         search = (EditText) findViewById(R.id.editText);
         listView = (ListView) findViewById(R.id.listView);
         spinner = (Spinner) findViewById(R.id.spinner);
+        pva = (Button) findViewById(R.id.btnPick);
+        alku = (Button) findViewById(R.id.btnPick1);
+        loppu = (Button) findViewById(R.id.btnPick2);
+        pvaText = (TextView) findViewById(R.id.showDate);
+        alkuText = (TextView) findViewById(R.id.showTime1);
+        loppuText = (TextView) findViewById(R.id.showTime2);
 
         // permissions
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
@@ -73,6 +86,11 @@ public class MainActivity extends AppCompatActivity {
         // add this information to an arraylist
         //options = list.getAll(); // this would add theater details to listview
         theaters = list.getNames(); // names used for spinner
+
+        //--------------------------------------------------------------------------------
+
+        setTime();
+        chooseTime();
 
         //--------------------------------------------------------------------------------
 
@@ -89,10 +107,9 @@ public class MainActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 name = parent.getItemAtPosition(position).toString();
 
-                showSelected();
-
                 // add movies in the theater to listview
-                readmovieXML(list.returnTeatteriID(name));
+                currentTheater = list.returnTeatteriID(name);
+                readmovieXML(currentTheater);
                 System.out.println("Movies added!");
 
             }
@@ -131,7 +148,6 @@ public class MainActivity extends AppCompatActivity {
                     //listView.setAdapter(adapter);
                     //adapter.notifyDataSetChanged();
                 }
-
             }
         });
     }
@@ -155,11 +171,88 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //--------------------------------------------------------------------------------------------
 
-    public void showSelected() {
-        //  kirjoitetaan tiedot vastaavasta spinnerin oliosta
-        //info.setText(list.findTeatteri(name));
+    public void setTime() {
+        Calendar c = Calendar.getInstance();
+        myHour1 = c.get(Calendar.HOUR);
+        myMinute1 = c.get(Calendar.MINUTE);
+        myYear = c.get(Calendar.YEAR);
+        myMonth = c.get(Calendar.MONTH);
+        myDay = c.get(Calendar.DAY_OF_MONTH);
+
+        myHour2 = 23;
+        myMinute2 = 59;
     }
+
+
+    //https://www.tutorialspoint.com/how-to-use-date-time-picker-in-android
+    public void chooseTime() {
+        pva.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Calendar calendar = Calendar.getInstance();
+                year = calendar.get(Calendar.YEAR);
+                month = calendar.get(Calendar.MONTH);
+                day = calendar.get(Calendar.DAY_OF_MONTH);
+                System.out.println(year + "." + month + "." + day);
+                DatePickerDialog datePickerDialog = new DatePickerDialog(context, new DatePickerDialog.OnDateSetListener() {
+                    @Override
+                    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                        myYear = year;
+                        myDay = dayOfMonth;
+                        myMonth = month;
+                        System.out.println("Date picked: " + myYear + "." + myMonth + "." + myDay);
+
+                        readmovieXML(currentTheater);
+                    }
+                }, year, month, day);
+                datePickerDialog.show();
+            }
+        });
+
+        alku.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Calendar c = Calendar.getInstance();
+                hour = c.get(Calendar.HOUR);
+                minute = c.get(Calendar.MINUTE);
+
+                TimePickerDialog timePickerDialog = new TimePickerDialog(context, R.style.Theme_AppCompat_Dialog, new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                        myHour1 = hourOfDay;
+                        myMinute1 = minute;
+
+                        readmovieXML(currentTheater);
+                    }
+                }, hour, minute, false);
+                timePickerDialog.show();
+            }
+        });
+
+        loppu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Calendar c = Calendar.getInstance();
+                hour = c.get(Calendar.HOUR);
+                minute = c.get(Calendar.MINUTE);
+
+                TimePickerDialog timePickerDialog = new TimePickerDialog(context, R.style.Theme_AppCompat_Dialog, new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                        myHour2 = hourOfDay;
+                        myMinute2 = minute;
+
+                        readmovieXML(currentTheater);
+                    }
+                }, hour, minute, false);
+                timePickerDialog.show();
+            }
+        });
+    }
+
+    //--------------------------------------------------------------------------------------------
 
     public void readXML() {
         try {
@@ -173,7 +266,6 @@ public class MainActivity extends AppCompatActivity {
             NodeList nList = doc1.getDocumentElement().getElementsByTagName("TheatreArea");
             parseNode(nList);
 
-
         } catch (IOException e) {
             e.printStackTrace();
         } catch (SAXException e) {
@@ -181,18 +273,29 @@ public class MainActivity extends AppCompatActivity {
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
         }
-
     }
 
     public void readmovieXML(String theaterID) {
         try {
             DocumentBuilder builder2 = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 
-            // get current date for url
-            String date = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date());
+            String url, date;
 
-            String url = "https://www.finnkino.fi/xml/Schedule/?area=" + theaterID + "&dt=" + date;
+            if (myDay == 0) {
+                // get current date for url
+                date = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date());
+            } else {
+                // use picked date
+                date = Integer.toString(myDay) + "." + Integer.toString(myMonth + 1) + "." + Integer.toString(myYear);
+            }
+
+            url = "https://www.finnkino.fi/xml/Schedule/?area=" + theaterID + "&dt=" + date;
             System.out.println(url);
+            // show date to user
+            pvaText.setText(date);
+            // show time to user
+            loppuText.setText(Integer.toString(myHour2) + ":" + Integer.toString(myMinute2));
+            alkuText.setText(Integer.toString(myHour1) + ":" + Integer.toString(myMinute1));
 
             Document doc = builder2.parse(url);
 
@@ -200,11 +303,23 @@ public class MainActivity extends AppCompatActivity {
 
             NodeList nList = doc.getDocumentElement().getElementsByTagName("Show");
 
-            parseNodeMovie(nList, theaterID, date);
-            System.out.println("Movies retrieved. Adding...");
+            //--------------------------------------------------------------------------------------------
+            // https://stackoverflow.com/questions/999172/how-to-parse-a-date
+            String time1 = (Integer.toString(myYear) + "-" + Integer.toString(myMonth + 1) + "-" + Integer.toString(myDay) + "T"
+                    + Integer.toString(myHour1) + ":" + Integer.toString(myMinute1) + ":00");
+            String time2 = (Integer.toString(myYear) + "-" + Integer.toString(myMonth + 1) + "-" + Integer.toString(myDay) + "T"
+                    + Integer.toString(myHour2) + ":" + Integer.toString(myMinute2) + ":00");
+            System.out.println("start: " + time1);
+            System.out.println("end: " + time2);
 
-            // add parsed movies to listview
-            movies = list.getMovieInfo(theaterID);
+            SimpleDateFormat formatter = new SimpleDateFormat("yyy-MM-dd'T'hh:mm:ss");
+            Date date1 = formatter.parse(time1);
+            Date date2 = formatter.parse(time2);
+
+            //--------------------------------------------------------------------------------------------
+
+            movies = parseNodeMovie(nList, theaterID, date1, date2);
+            System.out.println("Movies retrieved. Adding...");
 
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, movies);
             listView.setAdapter(adapter);
@@ -214,6 +329,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (SAXException e) {
             e.printStackTrace();
         } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
             e.printStackTrace();
         }
     }
@@ -232,7 +349,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void parseNodeMovie(NodeList nList, String x, String y) {
+    private ArrayList<String> parseNodeMovie(NodeList nList, String theaterID, Date date1, Date date2) throws ParseException {
+        ArrayList<String> elokuva_array = new ArrayList<String>();
+
         for (int i=0; i<nList.getLength(); i++) {
             Node node = nList.item(i);
             //System.out.println(node.getNodeName());
@@ -241,13 +360,10 @@ public class MainActivity extends AppCompatActivity {
                 // tehdään elementistä olio
                 Element element = (Element) node;
 
-                System.out.println("Adding movies...");
-                list.addMovies(element, x, y);
+                elokuva_array = list.addMovies(element, theaterID, date1, date2, elokuva_array);
             }
         }
+
+        return elokuva_array;
     }
-
-
-
-
 }
