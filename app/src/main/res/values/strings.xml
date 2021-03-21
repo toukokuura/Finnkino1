@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Smartpost</string>
     <string name="hae">Hae...</string>
+    <string name="pva">Valitse päivä</string>
+    <string name="aika1">Alkuaika</string>
+    <string name="aika2">Loppuaika</string>
 </resources>
